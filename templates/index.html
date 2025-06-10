@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="logo-title-container">
+            <img src="{{url_for('static', filename='images/LOGO.png')}}" alt="Logo Majomut" class="logo-img">
+            <h1>UNION DE PRODUCTORES ORGANICOS BENEFICIO MAJOMUT S.P.R DE R.L.</h1><br>
+        </div>
+        <h2>DATOS VALIDADOS POR EL SIC MAJOMUT</h2>
+        {% if geo_record %}
+            {# Mostrar nombre del socio si existe y no está vacío #}
+            {% set nombre_socio = geo_record.get('georeferenciacion/socio') %}
+            {% set numero_parcela = geo_record.get('georeferenciacion/numero_parcela') %}
+
+            {% if nombre_socio and nombre_socio|trim != "" %}
+                <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; justify-content: center;">
+                    <h2 class="socio-name-header">{{ nombre_socio.replace('_', ' ') }}</h2>
+
+                    {# Mostrar numero de la parcela si existe y no está vacío #}
+
+                    {% if numero_parcela and numero_parcela|trim != "" %}
+                                    <h2 class="margin:0; font-weight: normal; font-size: 0.9em">{{ numero_parcela.replace('_', ' ')  }}</h2>
+                    {% elif numero_parcela is not none %} 
+                    {# Opcional: si quieres mostrar algo cuando el nombre de la parcela existe pero está vacío #}
+                    <h2 class="margin: 0; font-style: italic; align-self: center;">(Numero de parcela no especificado)</h2>
+            {% endif %}
+                </div>
+            {% endif %}            
+            
+            <!-- {# Mostrar nombre de la parcela si existe y no está vacío #}
+            {% set nombre_parcela = geo_record.get('georeferenciacion/nombre_parcela') %}
+            {% if nombre_parcela and nombre_parcela|trim != "" %}
+                <h2 class="parcela-name-header">{{ nombre_parcela.replace('_', ' ')  }}</h2>
+            {% elif nombre_parcela is not none %} 
+                {# Opcional: si quieres mostrar algo cuando el nombre de la parcela existe pero está vacío #}
+                <h2 class="parcela-name-header">(Nombre de parcela no especificado)</h2>
+            {% endif %} -->
+
+            <!-- {#Mostrar el numero de la parcela#}
+            {% set numero_parcela = geo_record.get('productor_num_parcelas')%}
+            {% if numero_parcela and numero_parcela|trim != "" %}
+                <h2 class="">{{ numero_parcela.replace('_', ' ') }}</h2>
+            {% elif numero_parcela is not none %}
+                <h2>(Numero de la parcela no disponible)</h2>
+            {% endif %} -->
+        {% endif %}
+        
+        
+        <form class="search-form" method="GET" action="{{ url_for('index') }}">
+            <label for="search_id_parcela">Buscar por ID de Parcela:</label>
+            <input type="text" id="search_id_parcela" name="search_id_parcela" value="{{ current_search_id }}">
+            <button type="submit">Buscar</button>
+        </form>
+
+        {% if message %}
+            <div class="message {{ 'error' if 'No se encontró' in message or 'No se pudieron cargar' in message else 'info' }}">
+                {{ message }}
+            </div>
+        {% endif %}
+
+        <button id="print-button">Imprimir Página</button>
+
+        <div class="map-image-row">
+            <div class="map-column">
+                <div id="map">
+                    <div class="cardinal-points">
+                        <span class="cardinal-n">N</span>
+                        <span class="cardinal-s">S</span>
+                        <span class="cardinal-e">E</span>
+                        <span class="cardinal-w">O</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="symbols-column">
+                <p class="symbols-title">Simbología de objetos</p>
+                <img src="{{ url_for('static', filename='images/simbolos.png') }}" alt="Simbología del mapa" class="symbols-image">
+            </div>
+        </div>
+
+        <div class="tables-row">
+            <div class="table-column">
+                {% if geo_record %}
+                    <h2>Datos de georeferenciación y padron</h2>
+                    <table class="vertical-table">
+                        <tbody>
+                            {% for key, header_name in geo_headers.items() %}
+                            <tr>
+                                <th>{{ header_name }}</th>
+                                <td>
+                                    {% set value = geo_record.get(key, 'N/A') %}
+                                    {% if value is string %}
+                                        {{ value.replace('_', ' ') }}
+                                    {% else %}
+                                        {{ value }}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% elif current_search_id and not message %}
+                    <p>No se encontraron datos de georreferenciación para el ID de parcela buscado.</p>
+                {% endif %}
+            </div>
+
+            <div class="table-column">
+                {% if parcela_record %}
+                    <h2>Datos de parcela</h2>
+                    <table class="vertical-table">
+                        <tbody>
+                            {% for key, header_name in parcela_headers.items() %}
+                            <tr>
+                                <th>{{ header_name }}</th>
+                                <td>{{ parcela_record.get(key, 'N/A') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% elif geo_record and not message %}
+                    <p>No se encontró un registro de parcela coincidente para el código {{ geo_record.get('georeferenciacion/codigo_parcela', 'desconocido') }}.</p>
+                {% endif %}
+            </div>
+        </div>
+        <table class="table-infomanual">
+            <thead>
+                <tr>
+                    <th>Niveles productivos</th>
+                    <th>Número de plantas</th>
+                    <th>Distancia de siembra</th>
+                    <th>Variedad</th>
+                    <th>Año de siembra</th>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>N1=</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>N2=</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>N3=</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th>
+                        Numero de plantillas improductivas
+                    </th>
+                    <th>Distancia de siembra</th>
+                    <th>Variedad</th>
+                    <th>Año de siembra</th>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+
+    <script>
+        // Para depuración, muestra qué datos está recibiendo el script del template
+        console.log("Datos iniciales del template:");
+        console.log("centerCoords:", {{ center_coords_js | safe }});
+        console.log("polygonCoords:", {{ polygon_coords_js | safe }});
+        console.log("defaultMapCenter:", {{ default_map_center_js | safe }});
+        console.log("current_search_id:", "{{ current_search_id }}");
+
+        const centerCoords = {{ center_coords_js | safe }};
+        const polygonCoords = {{ polygon_coords_js | safe }};
+        const defaultMapCenter = {{ default_map_center_js | safe }};
+        const defaultMapZoom = {{ default_map_zoom | safe }};
+        const currentSearchId = "{{ current_search_id }}"; // Asegúrate de que se maneje como string
+
+        let map; 
+        let parcelFeatures; // Para agrupar el polígono y el marcador
+
+        // --- DEFINICIÓN DE CAPAS BASE ---
+        const streetsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        });
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+            maxZoom: 19
+        });
+        
+        const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+            maxZoom: 17 // OpenTopoMap suele tener un zoom máximo menor
+        });
+
+
+        // Stamen Terrain (alternativa a OpenTopoMap, a veces con mejor estética)
+        // const terrainLayer = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.{ext}', {
+        // 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        // 	subdomains: 'abcd',
+        // 	minZoom: 0,
+        // 	maxZoom: 18,
+        // 	ext: 'png'
+        // });
+
+
+        const humanitarianLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>',
+            maxZoom: 19
+        });
+
+        const baseMaps = {
+            "Streets": streetsLayer,
+            "Satellite": satelliteLayer,
+            "Terrain": terrainLayer,
+            "Humanitarian": humanitarianLayer
+        };
+        // --- FIN DEFINICIÓN DE CAPAS BASE ---
+
+
+        function initMap() {
+            if (map) {
+                map.remove(); 
+                map = null;
+            }
+            
+            // Inicializar el grupo de capas para la parcela si no existe
+            if (!parcelFeatures) {
+                parcelFeatures = L.layerGroup();
+            } else {
+                parcelFeatures.clearLayers(); // Limpiar capas anteriores del grupo
+            }
+
+            // Crear el mapa, añadiendo la capa base por defecto y el grupo de features
+            map = L.map('map', {
+                layers: [streetsLayer, parcelFeatures] // 'streetsLayer' como default, y el grupo de la parcela
+            });
+
+            // --- CONTROL DE CAPAS ---
+            const overlays = {
+                "Datos de Parcela": parcelFeatures // Permite mostrar/ocultar el polígono y marcador
+            };
+            L.control.layers(baseMaps, overlays).addTo(map);
+            // --- FIN CONTROL DE CAPAS ---
+
+            let boundsSet = false; 
+
+            // Dibujar polígono si existe y es válido
+            if (polygonCoords && Array.isArray(polygonCoords) && polygonCoords.length > 2) {
+                const validPolygonPoints = polygonCoords.filter(p => 
+                    Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number'
+                );
+                if (validPolygonPoints.length > 2) {
+                    try {
+                        const polygon = L.polygon(validPolygonPoints, {color: 'blue'});
+                        parcelFeatures.addLayer(polygon); // Añadir al grupo de capas
+                        map.fitBounds(polygon.getBounds()); 
+                        boundsSet = true;
+                    } catch (e) { 
+                        console.error("Error al crear polígono Leaflet:", e, validPolygonPoints); 
+                    }
+                } else {
+                    console.log("Polígono con menos de 3 puntos válidos, no se dibujará.", polygonCoords);
+                }
+            }
+
+            // Dibujar marcador central si existe y es válido
+            if (centerCoords && Array.isArray(centerCoords) && centerCoords.length === 2 && 
+                typeof centerCoords[0] === 'number' && typeof centerCoords[1] === 'number') {
+                try {
+                    const marker = L.marker(centerCoords).bindPopup('Punto central de la parcela');
+                    parcelFeatures.addLayer(marker); // Añadir al grupo de capas
+                    if (!boundsSet) { 
+                        map.setView(centerCoords, defaultMapZoom); 
+                        boundsSet = true;
+                    }
+                } catch (e) { 
+                    console.error("Error al crear marcador Leaflet:", e, centerCoords); 
+                }
+            }
+            
+            if (!boundsSet) {
+                                // Uso de la variable JS `currentSearchId` que se inicializó antes
+                if (!"{{ current_search_id }}" ||  currentSearchId.trim() === "" || 
+                    (!centerCoords && (!polygonCoords || polygonCoords.length <= 2))) {
+                     map.setView(defaultMapCenter, defaultMapZoom - 4); 
+                     console.log("Sin datos geo específicos o sin búsqueda, usando vista por defecto alejada.");
+                } else {
+                    map.setView(defaultMapCenter, defaultMapZoom - 2); // Si hubo búsqueda pero no se pudo dibujar nada
+                    console.log("Búsqueda realizada pero sin datos geográficos válidos para ajustar vista. Usando vista por defecto intermedia.");
+                }
+            }
+            setTimeout(() => { if(map) map.invalidateSize(false); }, 100);
+        }
+
+        function prepareAndPrint() {
+            console.log("prepareAndPrint llamada");
+            if (map) {
+                map.invalidateSize(true); // Forzar actualización síncrona del tamaño
+
+                setTimeout(() => { // Dar tiempo para que invalidateSize termine
+                    if (parcelFeatures && parcelFeatures.getLayers().length > 0) {
+                        console.log("Ajustando límites a parcelFeatures");
+                        map.fitBounds(parcelFeatures.getBounds(), {
+                             padding: [30, 30] // Añadir un poco de padding
+                        });
+                    } else if (centerCoords && Array.isArray(centerCoords) && centerCoords.length === 2) { // Validar centerCoords aquí también
+                         console.log("Centrando en centerCoords");
+                         map.setView(centerCoords, defaultMapZoom);
+                    } else {
+                        console.log("No hay features ni centro, usando vista actual del mapa.");
+                    }
+
+                    // Esperar a que el reajuste del mapa termine antes de imprimir
+                    setTimeout(() => {
+                        console.log("Intentando imprimir...");
+                        window.print();
+                    }, 500); // Ajustar este tiempo si es necesario
+                }, 100); // Corto delay después de invalidateSize
+            } else {
+                console.log("El objeto 'map' no está inicializado. Imprimiendo directamente.");
+                window.print();
+            }
+            // if (map) {
+            //     setTimeout(() => {
+            //         map.invalidateSize(true); 
+            //         if (parcelFeatures.getLayers().length > 0) { // Si hay algo en el grupo de capas
+            //             map.fitBounds(parcelFeatures.getBounds(), {
+            //                  padding: [30, 30]
+            //             });
+            //         } else if (centerCoords) { // fallback si solo hay centro pero no está en parcelFeatures (poco probable ahora)
+            //              map.setView(centerCoords, defaultMapZoom);
+            //         }
+                    
+            //         setTimeout(() => {
+            //             console.log("Preparando impresión...");
+
+            //             window.print();
+            //         }, 500);
+            //     }, 100);
+            // } else {
+            //     window.print();
+            // }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMap();
+
+            const printButton = document.getElementById("print-button");
+            if (printButton) {
+                printButton.addEventListener("click", prepareAndPrint);
+            } else {
+                console.error("Botón de impresión no encontrado");
+            }
+            // const btn = document.getElementById("print-button");
+            // if (btn) {
+            //     btn.addEventListener("click", prepareAndPrint);
+            // }
+        });
+    </script>
+</body>
+</html>

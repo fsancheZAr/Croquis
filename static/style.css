@@ -1,0 +1,423 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0 auto; /* Centra el body si tiene un max-width */
+    padding: 20px;
+    /* display: flex; /* No es necesario en body si .container maneja el ancho */
+    /* flex-direction: column; */
+    /* align-items: center; */
+    font-size: 14px;
+    background-color: #f4f4f4; /* Un color de fondo suave para la página */
+}
+
+.container {
+    width: 80%; /* Reducido de 95% a 80% para hacer más estrecho */
+    max-width: 800px; /* Reducido de 1200px a 800px para contenido más compacto */
+    margin: 0 auto; /* Mantiene el centrado */
+    background-color: #fff;
+    padding: 30px; /* Aumentado de 20px a 30px para mejor espaciado interno */
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* --- NUEVA FILA PARA MAPA E IMAGEN --- */
+.map-image-row {
+    display: flex;
+    gap: 10px; /* Espacio entre la columna del mapa y la columna de la imagen */
+    margin-bottom: 20px;
+    align-items: stretch; /* Alinea los items al inicio si tienen alturas diferentes */
+}
+
+.map-column {
+    flex: 0 0 40%; /* El mapa toma el 60% del ancho de la fila. No crecerá, no se encogerá. */
+    /* Alternativa: flex: 2; (si la imagen es flex: 1; el mapa será el doble de ancho) */
+}
+.symbols-column {
+    flex: 1; /* Ocupa el 40% restante */
+    display: flex;
+    flex-direction: column;
+    /* background-color: #f9f9f9; */
+    /* border: 1px solid #ddd; */
+    border-radius: 4px;
+    padding: 15px;
+}
+.symbols-title {
+    font-weight: bold;
+    margin: 0 0 10px 0;
+    text-align: center;
+    color: #333;
+}
+.symbols-image {
+    width: 100%;
+    height: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    flex-grow: 1; /* Hace que la imagen ocupe todo el espacio disponible */
+}
+
+
+.image-column {
+    flex: 0 0 38%; /* La imagen toma el ~40% (considerando el gap). No crecerá, no se encogerá. */
+    /* Alternativa: flex: 1; */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+#side-image {
+    width: 100%;
+    height: auto; /* Mantiene la proporción de la imagen */
+    max-height: 280px; /* Limita la altura de la imagen para que no sea demasiado grande */
+    object-fit: contain; /* o 'cover', según prefieras cómo se ajusta la imagen */
+    display: block;
+    margin-bottom: 10px;
+}
+
+#map {
+    height: 350px; /* Ajusta la altura del mapa como desees. Ahora es más pequeño. */
+    width: 100%; /* El mapa tomará el 100% del ancho de .map-column */
+    border: 1px solid #ccc;
+    position: relative; 
+    overflow: hidden; 
+    background-color: #e9e9e9; /* Color de fondo mientras carga */
+    /* Eliminado display:flex y align/justify: center del mapa, no son necesarios aquí */
+}
+
+/* tabla de información manual */
+.table-infomanual {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: Arial, sans-serif;
+    text-align: left;
+    border: #007bff;
+}
+
+.table-infomanual td{
+    height: 10px;
+    border: 2px solid #343434;
+}
+
+.table-infomanual th,
+.table-infomanual td{
+   
+    padding: 10px;
+}
+.table-infomanual thead{
+    background-color: #f2f2f2;
+}
+
+/* --- NUEVA FILA PARA TABLAS --- */
+.tables-row {
+    display: flex;
+    gap: 20px; /* Espacio entre las columnas de las tablas */
+    margin-bottom: 20px;
+    align-items: flex-start; /* Para que las tablas se alineen arriba si una es más larga */
+}
+
+.table-column {
+    flex: 1; /* Cada columna de tabla tomará la mitad del espacio disponible */
+    min-width: 0; /* Importante para flexbox con contenido que puede desbordar */
+    background-color: #fdfdfd;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.vertical-table {
+    border: 2px solid #343434; /* Borde exterior de la tabla*/
+    width: 100%; /* La tabla toma el 100% del ancho de .table-column */
+    border-collapse: collapse;
+    margin-bottom: 15px; /* Ya no es necesario si .table-column tiene padding */
+    font-size: 0.85em;
+    overflow: hidden; /*Asegurar los bordes redondeados*/
+}
+/* .vertical-table ya no necesita flex:1 o width:50% */
+
+.vertical-table th, .vertical-table td {
+    border: 2px solid #030303;
+    padding: 5px 8px;
+    text-align: left;
+    word-break: break-word;
+}
+.vertical-table th {
+    background-color: #f2f2f2;
+    width: 40%; /* Ajusta el ancho de la columna de encabezados de la tabla */
+    font-weight: bold;
+}
+.vertical-table td {
+    width: 60%;
+}
+
+h1, h2, h3 {
+    text-align: center;
+    color: #333;
+    margin-top: 10px;
+    margin-bottom: 15px;
+}
+h1 { font-size: 1.6em; }
+h2 { font-size: 1.3em; margin-top: 0; } /* Para títulos dentro de columnas */
+h3 { font-size: 1.1em; margin-top: 0; color: #555; }
+
+
+#print-button { /* Estilo más prominente */
+    background-color: #007bff;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    display: block;
+    margin: 0 auto 20px auto; /* Centrado */
+    transition: background-color 0.2s;
+}
+#print-button:hover {
+    background-color: #0056b3;
+}
+
+.logo-title-container {
+    display: flex;
+    align-items: center; /* Alinea verticalmente al centro */
+    gap: 15px; /* Espacio entre imagen y título */
+    margin-bottom: 20px;
+}
+
+.logo-img {
+    height: 60px; /* Ajusta según necesites */
+    width: auto; /* Mantiene proporción */
+    max-width: 100px; /* Máximo ancho para la imagen */
+    object-fit: contain; /* Asegura que la imagen se muestre completa */
+}
+
+.logo-title-container h1 {
+    margin: 0; /* Elimina márgenes por defecto del h1 */
+    font-size: 1.4em; /* Ajusta tamaño según necesidad */
+    line-height: 1.2; /* Mejor espaciado entre líneas si el título es largo */
+    flex-grow: 1; /* Permite que el título ocupe el espacio restante */
+}
+
+@media print {
+    .map-image-row {
+        gap: 10px !important;
+    }
+    
+    .symbols-column {
+        padding: 8px !important;
+        border: 1px solid #ccc !important;
+    }
+    
+    .symbols-image {
+        max-height: 280px !important;
+    }
+    .logo-title-container {
+        gap: 10px;
+    }
+    .logo-img {
+        height: 80px;
+        max-width: 80px;
+    }
+    .logo-title-container h1 {
+        font-size: 1.2em;
+    }
+}
+.search-form {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+    text-align: center;
+}
+.search-form input[type="text"] {
+    padding: 8px;
+    margin-right: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+.search-form button {
+    padding: 8px 15px;
+    font-size: 1em;
+    border-radius: 4px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.search-form button:hover {
+    background-color: #218838;
+}
+
+.message {
+    text-align: center;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+    font-size: 0.95em;
+}
+.message.info {
+    background-color: #e7f3fe;
+    border: 1px solid #d0eaff;
+    color: #0c5460;
+}
+.message.error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+/* --- ESTILOS PARA PUNTOS CARDINALES (revisado) --- */
+.cardinal-points {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Para que no interfiera con el clic/arrastre del mapa */
+}
+
+.cardinal-points span {
+    position: absolute;
+    z-index: 1000; 
+    background-color: rgba(255, 255, 255, 0.6); /* Un poco más sutil */
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-weight: bold; /* 'bolder' no es estándar, 'bold' sí */
+    color: #333;
+    font-size: 11px; /* Un poco más pequeño */
+    pointer-events: all; /* Permitir que estos textos sean seleccionables si es necesario, aunque con none en el padre no lo serán */
+}
+
+.cardinal-n { top: 5px; left: 50%; transform: translateX(-50%); }
+.cardinal-s { bottom: 5px; left: 50%; transform: translateX(-50%); }
+.cardinal-e { top: 50%; right: 5px; transform: translateY(-50%); }
+.cardinal-w { top: 50%; left: 5px; transform: translateY(-50%); }
+/* --- FIN ESTILOS PUNTOS CARDINALES --- */
+
+
+@media print {
+    /* Configuración de página */
+    @page {
+        margin: 0.5in; /* Márgenes mínimos para evitar recorte */
+        size: A4; /* o letter si prefieres */
+        table {
+        font-size: 20pt;
+    }
+    }
+    
+    body { 
+        padding: 0 !important; 
+        margin: 0 !important;
+        font-size: 8pt; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important;
+        background-color: #fff !important;
+        width: 100% !important;
+    }
+    
+    .container { 
+        width: 100% !important; 
+        max-width: none !important; 
+        box-shadow: none !important;
+        padding: 5px !important; /* Padding mínimo */
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+    /* .table-infomanual {
+        font-size: 12px;
+    } */
+
+    /* Asegurar que el contenido no se desborde */
+    .map-image-row, .tables-row {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important; /* Gap más pequeño */
+        page-break-inside: avoid !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .map-column { 
+        flex: 0 0 50% !important; /* Reducido para evitar desbordamiento */
+        max-width: 50% !important;
+    }
+    
+    .symbols-column {
+        flex: 0 0 45% !important; /* Ajustado para que quepa */
+        max-width: 45% !important;
+        padding: 5px !important;
+    }
+    
+    .image-column { 
+        display: none !important; /* Ocultar para ahorrar espacio */
+    }
+    
+    .table-column { 
+        flex: 1 !important; 
+        padding: 3px !important;
+        max-width: 48% !important; /* Asegurar que quepan dos columnas */
+    }
+
+    #map {
+        width: 100% !important;
+        height: 250px !important; /* Altura reducida */
+        border: 1px solid #999 !important;
+        page-break-inside: avoid !important;
+        position: relative !important;
+        box-sizing: border-box !important;
+    }
+    
+    .vertical-table { 
+        font-size: 11pt !important; /* Fuente más pequeña */
+        page-break-inside: avoid !important;
+        width: 100% !important;
+        table-layout: fixed !important; /* Forzar ancho fijo */
+    }
+    
+    .vertical-table th, .vertical-table td { 
+        padding: 1px 2px !important;
+        font-size: 8pt !important;
+        word-wrap: break-word !important;
+    }
+    
+    /* Ocultar elementos innecesarios */
+    button#print-button, 
+    .search-form,
+    .no-print, 
+    .message { 
+        display: none !important; 
+    }
+    
+    h1 { 
+        font-size: 10pt !important; 
+        margin: 5px 0 !important;
+    }
+    h2 { 
+        font-size: 8pt !important; 
+        margin: 3px 0 !important;
+    }
+    h3 { 
+        font-size: 7pt !important; 
+        margin: 2px 0 !important;
+    }
+
+    .cardinal-points span {
+        visibility: visible !important; 
+        display: block !important;
+        font-size: 6pt !important;
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        border: 0.5px solid #aaa !important;
+        padding: 1px 2px !important;
+    }
+    
+    .leaflet-control-container { 
+        display: none !important; 
+    }
+    
+    /* Prevenir desbordamiento */
+    * {
+        box-sizing: border-box !important;
+    }
+    .leaflet-control-container { display: none !important; } /* Ocultar controles de Leaflet */
+}
