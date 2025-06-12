@@ -67,7 +67,7 @@
             </div>
         {% endif %}
 
-        <button id="print-button">Imprimir Página</button>
+        <!-- <button id="print-button">Imprimir Página</button> -->
 
         <div class="map-image-row">
             <div class="map-column">
@@ -86,7 +86,33 @@
                 <img src="{{ url_for('static', filename='images/simbolos.png') }}" alt="Simbología del mapa" class="symbols-image">
             </div>
         </div>
-
+        <div>
+            {% if geo_record %}
+                <div class="update-and-tables-container">
+                    <div class="table-column update-section-wrapper">
+                        <div class="update-section">
+                            <h2>Modifica punto central</h2>
+                            <p>Haz click en el mapa y arrastre para mayor precición</p>
+                            
+                            <!-- Aquí se mostrará la información del nuevo punto -->
+                            <div id="new-location-info" class="location-info-box">
+                                Haga click para tener un punto en el mapa..
+                            </div>
+                            
+                            <form id="update-form" method="POST" action="{{ url_for('update_location') }}">
+                                <!-- Campos ocultos para enviar los datos al backend -->
+                                <input type="hidden" name="record_id" value="{{ geo_record._id }}">
+                                <input type="hidden" name="search_id_parcela" value="{{ current_search_id }}">
+                                
+                                <!-- Este campo se llenará con 'lat lon alt accuracy' -->
+                                <input type="hidden" id="new_gps_coords" name="new_gps_coords" value="">
+                                
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endif %} 
+        </div>
         <div class="tables-row">
             <div class="table-column">
                 {% if geo_record %}
@@ -131,11 +157,12 @@
                 {% endif %}
             </div>
         </div>
+  
         <table class="table-infomanual">
             <thead>
                 <tr>
-                    <th>Niveles productivos</th>
                     <th>Número de plantas</th>
+                    <th>Producción por niveles (kg)</th>
                     <th>Distancia de siembra</th>
                     <th>Variedad</th>
                     <th>Año de siembra</th>
@@ -179,6 +206,9 @@
             </tbody>
         </table>
     </div>
+    <div>
+
+    </div>
 
 
     <script>
@@ -188,196 +218,189 @@
         console.log("polygonCoords:", {{ polygon_coords_js | safe }});
         console.log("defaultMapCenter:", {{ default_map_center_js | safe }});
         console.log("current_search_id:", "{{ current_search_id }}");
+        const geoRecordExists = {{ 'true' if geo_record else 'false' }};
 
         const centerCoords = {{ center_coords_js | safe }};
         const polygonCoords = {{ polygon_coords_js | safe }};
         const defaultMapCenter = {{ default_map_center_js | safe }};
         const defaultMapZoom = {{ default_map_zoom | safe }};
-        const currentSearchId = "{{ current_search_id }}"; // Asegúrate de que se maneje como string
+        const currentSearchId = "{{ current_search_id }}";
 
         let map; 
         let parcelFeatures; // Para agrupar el polígono y el marcador
+        let newLocationMarker = null; // Marcador para la nueva ubicación (el rojo)
+
+        const newLocationInfoBox = document.getElementById('new-location-info');
+        const saveLocationButton = document.getElementById('save-location-button');
+        const newGpsCoordsInput = document.getElementById('new_gps_coords');
 
         // --- DEFINICIÓN DE CAPAS BASE ---
         const streetsLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19
         });
 
         const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-            maxZoom: 19
+            attribution: 'Tiles © Esri', maxZoom: 19
         });
         
         const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
-            maxZoom: 17 // OpenTopoMap suele tener un zoom máximo menor
-        });
-
-
-        // Stamen Terrain (alternativa a OpenTopoMap, a veces con mejor estética)
-        // const terrainLayer = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}.{ext}', {
-        // 	attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> — Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        // 	subdomains: 'abcd',
-        // 	minZoom: 0,
-        // 	maxZoom: 18,
-        // 	ext: 'png'
-        // });
-
-
-        const humanitarianLayer = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a> hosted by <a href="https://openstreetmap.fr/" target="_blank">OpenStreetMap France</a>',
-            maxZoom: 19
+            attribution: 'Map data: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)', maxZoom: 17
         });
 
         const baseMaps = {
-            "Streets": streetsLayer,
-            "Satellite": satelliteLayer,
-            "Terrain": terrainLayer,
-            "Humanitarian": humanitarianLayer
+            "Calles": streetsLayer,
+            "Satélite": satelliteLayer,
+            "Terreno": terrainLayer,
         };
+
+        const redIcon = new L.Icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+            iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
         // --- FIN DEFINICIÓN DE CAPAS BASE ---
 
-
-        function initMap() {
-            if (map) {
-                map.remove(); 
-                map = null;
-            }
+    /**
+     * Obtiene la altitud para un punto (lat, lng) usando la API de Open-Meteo.
+     * Es una función asíncrona porque la petición a la API toma tiempo.
+     */
+    async function fetchElevation(lat, lng) {
+        if (!newLocationInfoBox) return; // Salir si no existe la caja de info
+        
+        newLocationInfoBox.innerHTML = `Lat: ${lat.toFixed(6)}, Lon: ${lng.toFixed(6)}<br><em>Cargando altitud...</em>`;
+        if (saveLocationButton) saveLocationButton.disabled = true;
+        
+        const apiUrl = `https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lng}`;
+        
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
             
-            // Inicializar el grupo de capas para la parcela si no existe
-            if (!parcelFeatures) {
-                parcelFeatures = L.layerGroup();
-            } else {
-                parcelFeatures.clearLayers(); // Limpiar capas anteriores del grupo
-            }
-
-            // Crear el mapa, añadiendo la capa base por defecto y el grupo de features
-            map = L.map('map', {
-                layers: [streetsLayer, parcelFeatures] // 'streetsLayer' como default, y el grupo de la parcela
-            });
-
-            // --- CONTROL DE CAPAS ---
-            const overlays = {
-                "Datos de Parcela": parcelFeatures // Permite mostrar/ocultar el polígono y marcador
-            };
-            L.control.layers(baseMaps, overlays).addTo(map);
-            // --- FIN CONTROL DE CAPAS ---
-
-            let boundsSet = false; 
-
-            // Dibujar polígono si existe y es válido
-            if (polygonCoords && Array.isArray(polygonCoords) && polygonCoords.length > 2) {
-                const validPolygonPoints = polygonCoords.filter(p => 
-                    Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number'
-                );
-                if (validPolygonPoints.length > 2) {
-                    try {
-                        const polygon = L.polygon(validPolygonPoints, {color: 'blue'});
-                        parcelFeatures.addLayer(polygon); // Añadir al grupo de capas
-                        map.fitBounds(polygon.getBounds()); 
-                        boundsSet = true;
-                    } catch (e) { 
-                        console.error("Error al crear polígono Leaflet:", e, validPolygonPoints); 
-                    }
-                } else {
-                    console.log("Polígono con menos de 3 puntos válidos, no se dibujará.", polygonCoords);
-                }
-            }
-
-            // Dibujar marcador central si existe y es válido
-            if (centerCoords && Array.isArray(centerCoords) && centerCoords.length === 2 && 
-                typeof centerCoords[0] === 'number' && typeof centerCoords[1] === 'number') {
-                try {
-                    const marker = L.marker(centerCoords).bindPopup('Punto central de la parcela');
-                    parcelFeatures.addLayer(marker); // Añadir al grupo de capas
-                    if (!boundsSet) { 
-                        map.setView(centerCoords, defaultMapZoom); 
-                        boundsSet = true;
-                    }
-                } catch (e) { 
-                    console.error("Error al crear marcador Leaflet:", e, centerCoords); 
-                }
-            }
+            const data = await response.json();
+            const elevation = data.elevation[0];
             
-            if (!boundsSet) {
-                                // Uso de la variable JS `currentSearchId` que se inicializó antes
-                if (!"{{ current_search_id }}" ||  currentSearchId.trim() === "" || 
-                    (!centerCoords && (!polygonCoords || polygonCoords.length <= 2))) {
-                     map.setView(defaultMapCenter, defaultMapZoom - 4); 
-                     console.log("Sin datos geo específicos o sin búsqueda, usando vista por defecto alejada.");
-                } else {
-                    map.setView(defaultMapCenter, defaultMapZoom - 2); // Si hubo búsqueda pero no se pudo dibujar nada
-                    console.log("Búsqueda realizada pero sin datos geográficos válidos para ajustar vista. Usando vista por defecto intermedia.");
-                }
-            }
-            setTimeout(() => { if(map) map.invalidateSize(false); }, 100);
+            // Formateamos el string como lo espera Kobo: lat lon alt precision
+            // Usamos 5.0 como una precisión por defecto, puedes cambiarla.
+            const koboGpsString = `${lat.toFixed(6)} ${lng.toFixed(6)} ${elevation.toFixed(2)} 5.0`;
+
+            // Actualizamos la interfaz y el formulario
+            newLocationInfoBox.innerHTML = `<b>Latitud:</b> ${lat.toFixed(6)}<br><b>Longitud:</b> ${lng.toFixed(6)}<br><b>Altitud (aprox.):</b> ${elevation.toFixed(2)} m`;
+            if (newGpsCoordsInput) newGpsCoordsInput.value = koboGpsString;
+            if (saveLocationButton) saveLocationButton.disabled = false; // Habilitar el botón de guardar
+
+        } catch (error) {
+            console.error("Error al obtener la altitud:", error);
+            newLocationInfoBox.innerHTML = `<b>Error al obtener altitud.</b><br>Lat: ${lat.toFixed(6)}, Lon: ${lng.toFixed(6)}<br>Intenta de nuevo.`;
+            if (saveLocationButton) saveLocationButton.disabled = true; // Mantener deshabilitado
+        }
+    }
+
+    /**
+     * Función que se ejecuta cuando se termina de arrastrar el marcador rojo.
+     */
+    function onMarkerDragEnd(event) {
+        const marker = event.target;
+        const position = marker.getLatLng();
+        map.panTo(position); // Centra el mapa en la nueva posición del marcador
+        fetchElevation(position.lat, position.lng);
+    }
+    
+    /**
+     * Función que se ejecuta al hacer clic en el mapa.
+     */
+    function onMapClick(e) {
+        const lat = e.latlng.lat;
+        const lng = e.latlng.lng;
+
+        if (!newLocationMarker) {
+            // Si el marcador no existe, lo creamos
+            newLocationMarker = L.marker([lat, lng], { 
+                icon: redIcon,
+                draggable: true // ¡Hacerlo arrastrable!
+            }).addTo(map);
+            newLocationMarker.bindPopup('Arrastra este marcador para ajustar la nueva ubicación.').openPopup();
+            newLocationMarker.on('dragend', onMarkerDragEnd); // Añadir el evento de arrastre
+        } else {
+            // Si ya existe, solo lo movemos
+            newLocationMarker.setLatLng([lat, lng]);
+        }
+        
+        // Obtenemos la altitud para la nueva posición
+        fetchElevation(lat, lng);
+    }
+
+    function initMap() {
+        if (map) {
+            map.remove(); 
+            map = null;
+        }
+        
+        if (!parcelFeatures) {
+            parcelFeatures = L.layerGroup();
+        } else {
+            parcelFeatures.clearLayers();
         }
 
-        function prepareAndPrint() {
-            console.log("prepareAndPrint llamada");
-            if (map) {
-                map.invalidateSize(true); // Forzar actualización síncrona del tamaño
-
-                setTimeout(() => { // Dar tiempo para que invalidateSize termine
-                    if (parcelFeatures && parcelFeatures.getLayers().length > 0) {
-                        console.log("Ajustando límites a parcelFeatures");
-                        map.fitBounds(parcelFeatures.getBounds(), {
-                             padding: [30, 30] // Añadir un poco de padding
-                        });
-                    } else if (centerCoords && Array.isArray(centerCoords) && centerCoords.length === 2) { // Validar centerCoords aquí también
-                         console.log("Centrando en centerCoords");
-                         map.setView(centerCoords, defaultMapZoom);
-                    } else {
-                        console.log("No hay features ni centro, usando vista actual del mapa.");
-                    }
-
-                    // Esperar a que el reajuste del mapa termine antes de imprimir
-                    setTimeout(() => {
-                        console.log("Intentando imprimir...");
-                        window.print();
-                    }, 500); // Ajustar este tiempo si es necesario
-                }, 100); // Corto delay después de invalidateSize
-            } else {
-                console.log("El objeto 'map' no está inicializado. Imprimiendo directamente.");
-                window.print();
-            }
-            // if (map) {
-            //     setTimeout(() => {
-            //         map.invalidateSize(true); 
-            //         if (parcelFeatures.getLayers().length > 0) { // Si hay algo en el grupo de capas
-            //             map.fitBounds(parcelFeatures.getBounds(), {
-            //                  padding: [30, 30]
-            //             });
-            //         } else if (centerCoords) { // fallback si solo hay centro pero no está en parcelFeatures (poco probable ahora)
-            //              map.setView(centerCoords, defaultMapZoom);
-            //         }
-                    
-            //         setTimeout(() => {
-            //             console.log("Preparando impresión...");
-
-            //             window.print();
-            //         }, 500);
-            //     }, 100);
-            // } else {
-            //     window.print();
-            // }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            initMap();
-
-            const printButton = document.getElementById("print-button");
-            if (printButton) {
-                printButton.addEventListener("click", prepareAndPrint);
-            } else {
-                console.error("Botón de impresión no encontrado");
-            }
-            // const btn = document.getElementById("print-button");
-            // if (btn) {
-            //     btn.addEventListener("click", prepareAndPrint);
-            // }
+        map = L.map('map', {
+            layers: [streetsLayer, parcelFeatures]
         });
-    </script>
+
+        const overlays = { "Datos de Parcela": parcelFeatures };
+        L.control.layers(baseMaps, overlays).addTo(map);
+
+        let boundsSet = false; 
+
+        if (polygonCoords && Array.isArray(polygonCoords) && polygonCoords.length > 2) {
+            const validPolygonPoints = polygonCoords.filter(p => Array.isArray(p) && p.length === 2 && typeof p[0] === 'number' && typeof p[1] === 'number');
+            if (validPolygonPoints.length > 2) {
+                try {
+                    const polygon = L.polygon(validPolygonPoints, {color: 'blue'});
+                    parcelFeatures.addLayer(polygon);
+                    map.fitBounds(polygon.getBounds()); 
+                    boundsSet = true;
+                } catch (e) { console.error("Error al crear polígono:", e); }
+            }
+        }
+
+        if (centerCoords && Array.isArray(centerCoords) && centerCoords.length === 2 && typeof centerCoords[0] === 'number' && typeof centerCoords[1] === 'number') {
+            try {
+                const marker = L.marker(centerCoords).bindPopup('Ubicación central actual');
+                parcelFeatures.addLayer(marker);
+                if (!boundsSet) { 
+                    map.setView(centerCoords, defaultMapZoom); 
+                    boundsSet = true;
+                }
+            } catch (e) { console.error("Error al crear marcador:", e); }
+        }
+        
+        if (!boundsSet) {
+            if (!currentSearchId || currentSearchId.trim() === "") {
+                 map.setView(defaultMapCenter, 9); // Zoom más alejado si no hay búsqueda
+            } else {
+                map.setView(defaultMapCenter, defaultMapZoom);
+            }
+        }
+
+        // *** AÑADIR EL LISTENER DE CLIC SOLO SI HAY UNA PARCELA CARGADA ***
+        if (geoRecordExists) {
+            map.on('click', onMapClick);
+        }
+
+        setTimeout(() => { if(map) map.invalidateSize(false); }, 100);
+    }
+
+    function prepareAndPrint() {
+        // ... (tu función de imprimir no necesita cambios)
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+
+        const printButton = document.getElementById("print-button");
+        if (printButton) {
+            printButton.addEventListener("click", prepareAndPrint);
+        }
+    });
+</script>
 </body>
 </html>

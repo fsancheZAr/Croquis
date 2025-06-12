@@ -214,7 +214,7 @@ h3 { font-size: 1.1em; margin-top: 0; color: #555; }
     }
     .logo-img {
         height: 80px;
-        max-width: 80px;
+        max-width: 60px;
     }
     .logo-title-container h1 {
         font-size: 1.2em;
@@ -299,10 +299,10 @@ h3 { font-size: 1.1em; margin-top: 0; color: #555; }
 @media print {
     /* Configuración de página */
     @page {
-        margin: 0.5in; /* Márgenes mínimos para evitar recorte */
+        margin: 0.6in; /* Márgenes mínimos para evitar recorte */
         size: A4; /* o letter si prefieres */
         table {
-        font-size: 20pt;
+        font-size: 18pt;
     }
     }
     
@@ -320,7 +320,7 @@ h3 { font-size: 1.1em; margin-top: 0; color: #555; }
         width: 100% !important; 
         max-width: none !important; 
         box-shadow: none !important;
-        padding: 5px !important; /* Padding mínimo */
+        padding: 1px !important; /* Padding mínimo */
         margin: 0 !important;
         border-radius: 0 !important;
     }
@@ -381,9 +381,12 @@ h3 { font-size: 1.1em; margin-top: 0; color: #555; }
         word-wrap: break-word !important;
     }
     
+    
     /* Ocultar elementos innecesarios */
     button#print-button, 
     .search-form,
+    .update-section,
+    .update-and-tables-container,
     .no-print, 
     .message { 
         display: none !important; 
